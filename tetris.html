@@ -1,0 +1,1625 @@
+<!--
+  All glory to Lord and God Jesus Christ.
+  
+  There can only be one truth.
+  
+  Matt 5:3
+  Blessed are the poor in spirit: for theirs is the kingdom of heaven.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Bit Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.3) 2px,
+                rgba(0, 0, 0, 0.3) 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .game-container {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: #1a1a1a;
+            border: 2px solid #3a3a3a;
+            border-top-color: #4a4a4a;
+            border-left-color: #4a4a4a;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            animation: crtGlow 4s ease-in-out infinite; /* --- Moved glow here --- */
+        }
+        .game-area {
+            position: relative;
+        }
+        #gameCanvas {
+            background: #0f0f0f;
+            border: 1px solid #2a2a2a;
+            border-top-color: #3a3a3a;
+            border-left-color: #3a3a3a;
+            border-radius: 3px;
+            display: block;
+            /* --- Removed animation from here --- */
+            /* --- REMOVED INNER GLOW BOX-SHADOW --- */
+            /* box-shadow: 
+                0 0 20px rgba(0, 255, 0, 0.3),
+                inset 0 0 20px rgba(0, 255, 0, 0.05),
+                0 0 40px rgba(0, 255, 0, 0.1); */
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 180px;
+        }
+        .stats-box {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-top-color: #3a3a3a;
+            border-left-color: #3a3a3a;
+            border-radius: 3px;
+            padding: 10px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .stat-row:last-child {
+            margin-bottom: 0;
+        }
+        .stat-label {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 
+                0 0 5px currentColor,
+                0 0 10px currentColor,
+                0 0 15px rgba(0, 255, 0, 0.5);
+            letter-spacing: 2px;
+        }
+        .score-value {
+            color: #ffffff;
+            text-shadow: 
+                1px 1px 0 #00ff00,
+                2px 2px 0 #00cc00,
+                3px 3px 0 #009900,
+                0 0 10px rgba(0, 255, 0, 0.8),
+                0 0 20px rgba(0, 255, 0, 0.4);
+            animation: scoreGlow 2s ease-in-out infinite;
+        }
+        @keyframes scoreGlow {
+            0%, 100% {
+                filter: brightness(1);
+            }
+            50% {
+                filter: brightness(1.2);
+            }
+        }
+        .level-value {
+            color: #ffff00;
+        }
+        .lines-value {
+            color: #00ffff;
+        }
+        .next-piece-box {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-top-color: #3a3a3a;
+            border-left-color: #3a3a3a;
+            border-radius: 3px;
+            padding: 10px;
+            text-align: center;
+        }
+        .next-piece-box h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #nextCanvas {
+            background: #0f0f0f;
+            border: 1px solid #1a1a1a;
+            border-radius: 2px;
+            display: block;
+            margin: 0 auto;
+        }
+        .controls {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-top-color: #3a3a3a;
+            border-left-color: #3a3a3a;
+            border-radius: 3px;
+            padding: 10px;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .controls h3 {
+            color: #00ff00;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .controls div {
+            color: #888;
+        }
+        .controls span {
+            color: #fff;
+            font-weight: bold;
+        }
+        .high-scores {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-top-color: #3a3a3a;
+            border-left-color: #3a3a3a;
+            border-radius: 3px;
+            padding: 10px;
+            font-size: 11px;
+        }
+        .high-scores h3 {
+            color: #00ff00;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+        .high-scores ol {
+            list-style: none;
+            padding: 0;
+            color: #888;
+        }
+        .high-scores li {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 2px 4px;
+        }
+        .high-scores li.current {
+            background: #2a2a2a;
+            color: #ffff00;
+            animation: blink 0.5s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+        .high-scores .rank {
+            color: #ffff00;
+            margin-right: 5px;
+        }
+        .high-scores .name {
+            text-transform: uppercase;
+            color: #fff;
+        }
+        button {
+            background: #1a1a1a;
+            color: #00ff00;
+            border: 3px solid #00ff00;
+            border-radius: 0;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: none;
+            position: relative;
+            box-shadow: 
+                4px 4px 0 #003300,
+                inset -2px -2px 0 rgba(0, 0, 0, 0.5),
+                inset 2px 2px 0 rgba(0, 255, 0, 0.3);
+        }
+        button:hover {
+            background: #00ff00;
+            color: #0a0a0a;
+            transform: translate(2px, 2px);
+            box-shadow: 
+                2px 2px 0 #003300,
+                0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        button:active {
+            transform: translate(4px, 4px);
+            box-shadow: 
+                0 0 0 #003300,
+                inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+        }
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            border-radius: 3px;
+        }
+        .game-over-overlay.show {
+            display: flex;
+        }
+        .game-over-text {
+            font-size: 32px;
+            color: #ff0000;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 
+                2px 2px 0 #990000,
+                4px 4px 0 #660000,
+                6px 6px 0 #330000,
+                0 0 20px rgba(255, 0, 0, 0.8),
+                0 0 40px rgba(255, 0, 0, 0.4);
+            animation: blink 0.5s steps(2) infinite;
+        }
+        .final-score {
+            font-size: 20px;
+            color: #ffff00;
+        }
+        .name-entry {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .name-entry.show {
+            display: flex;
+        }
+        .name-entry-title {
+            color: #00ff00;
+            font-size: 18px;
+            text-transform: uppercase;
+            animation: blink 0.5s infinite;
+        }
+        .name-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        .name-char {
+            width: 40px;
+            height: 50px;
+            font-size: 28px;
+            text-align: center;
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 3px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+        .name-char:focus {
+            outline: none;
+            background: #3a3a3a;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        .pause-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #ffff00;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+            display: none;
+        }
+        .pause-overlay.show {
+            display: block;
+        }
+        .volume-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 5px 10px;
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            color: #00ff00;
+            font-size: 12px;
+            display: none;
+        }
+        .volume-indicator.show {
+            display: block;
+        }
+        @keyframes pixelDisintegrate {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+                filter: brightness(3) contrast(2);
+            }
+            25% {
+                transform: translate(calc(var(--gx) * 10px), calc(var(--gy) * 10px)) scale(1);
+                filter: brightness(2) contrast(1.5);
+            }
+            50% {
+                transform: translate(calc(var(--gx) * 20px), calc(var(--gy) * 20px)) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(calc(var(--gx) * 40px), calc(var(--gy) * 40px + 60px)) scale(0);
+                opacity: 0;
+            }
+        }
+        @keyframes blockFlash {
+            0%, 16%, 32%, 48%, 64%, 80%, 100% {
+                background: var(--color);
+                box-shadow: inset 2px 2px 0 rgba(255,255,255,0.4), inset -2px -2px 0 rgba(0,0,0,0.6);
+            }
+            8%, 24%, 40%, 56%, 72%, 88% {
+                background: #ffffff;
+                box-shadow: 0 0 10px #ffffff, inset 0 0 10px rgba(255,255,255,0.8);
+            }
+        }
+        @keyframes scanlineGlow {
+            0% {
+                top: -4px;
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+        @keyframes crtGlow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 255, 0, 0.4), inset 0 0 20px rgba(0, 255, 0, 0.1);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(0, 255, 0, 0.6), inset 0 0 30px rgba(0, 255, 0, 0.2);
+            }
+        }
+        /* --- Removed duplicate #gameCanvas rule --- */
+        .scanline-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to bottom, 
+                transparent, 
+                rgba(0, 255, 0, 0.1),
+                rgba(0, 255, 0, 0.2),
+                rgba(0, 255, 0, 0.1),
+                transparent
+            );
+            pointer-events: none;
+            animation: scanlineGlow 3s linear infinite;
+            z-index: 10;
+        }
+        .pixel-block {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            image-rendering: pixelated;
+            animation: pixelDisintegrate 0.5s ease-out forwards;
+        }
+        .pixel-block::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: inherit;
+            filter: brightness(1.5);
+        }
+        .block-flash {
+            position: absolute;
+            animation: blockFlash 0.3s steps(1) forwards;
+        }
+        .white-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+        .white-flash.active {
+            animation: whiteFlashPulse 0.2s steps(3) forwards;
+        }
+        @keyframes whiteFlashPulse {
+            0% { opacity: 0; }
+            33% { opacity: 0.8; }
+            66% { opacity: 0.4; }
+            100% { opacity: 0; }
+        }
+        @keyframes pixelPop {
+            0% { 
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% { 
+                transform: scale(1.5);
+                opacity: 1;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+        .pixel-pop {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: white;
+            animation: pixelPop 0.3s steps(4) forwards;
+        }
+        /* --- Optimized explosion styles --- */
+        /* Simplified flashing block effect */
+        .block-flash {
+            position: absolute;
+            animation: blockFlash 0.3s steps(1) forwards;
+        }
+        /* Simplified pixel explosion particles */
+        .pixel-block {
+            position: absolute;
+            image-rendering: pixelated;
+            animation: pixelDisintegrate 0.5s ease-out forwards;
+        }
+        /* Simplified "pop" effect */
+        .pixel-pop {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: white;
+            animation: pixelPop 0.3s steps(4) forwards;
+        }
+        /* White flash overlay */
+        .white-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+        .white-flash.active {
+            animation: whiteFlashPulse 0.2s steps(3) forwards;
+        }
+        /* Scanline effect */
+        .scanline-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to bottom, 
+                transparent, 
+                rgba(0, 255, 0, 0.1),
+                rgba(0, 255, 0, 0.2),
+                rgba(0, 255, 0, 0.1),
+                transparent
+            );
+            pointer-events: none;
+            animation: scanlineGlow 3s linear infinite;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-area">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div class="scanline-effect"></div>
+            <div class="pause-overlay" id="pauseOverlay">PAUSED</div>
+            <div class="game-over-overlay" id="gameOverOverlay">
+                <div class="game-over-text">Game Over</div>
+                <div class="final-score">Score: <span id="finalScore">0</span></div>
+                <div class="name-entry" id="nameEntry">
+                    <div class="name-entry-title">New High Score!</div>
+                    <div class="name-entry-title">Enter Name:</div>
+                    <div class="name-input-container">
+                        <input type="text" class="name-char" maxlength="1" id="char1">
+                        <input type="text" class="name-char" maxlength="1" id="char2">
+                        <input type="text" class="name-char" maxlength="1" id="char3">
+                    </div>
+                    <button onclick="submitHighScore()">Submit</button>
+                </div>
+            </div>
+            <div class="volume-indicator" id="volumeIndicator">Volume: 100%</div>
+        </div>
+        <div class="sidebar">
+            <div class="stats-box">
+                <div class="stat-row">
+                    <span class="stat-label">Score</span>
+                    <span class="stat-value score-value" id="score">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Level</span>
+                    <span class="stat-value level-value" id="level">1</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Lines</span>
+                    <span class="stat-value lines-value" id="lines">0</span>
+                </div>
+            </div>
+            <div class="next-piece-box">
+                <h3>Next</h3>
+                <canvas id="nextCanvas" width="100" height="80"></canvas>
+            </div>
+            <button id="startBtn" onclick="startGame()">Start Game</button>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div><span>↑</span> Rotate</div>
+                <div><span>←→</span> Move</div>
+                <div><span>↓</span> Soft Drop</div>
+                <div><span>Space</span> Hard Drop</div>
+                <div><span>P</span> Pause</div>
+                <div><span>M</span> Music Volume</div>
+                <div><span>ESC</span> End Game</div>
+            </div>
+            <div class="high-scores">
+                <h3>High Scores</h3>
+                <ol id="highScoresList">
+                    <li><span class="rank">1.</span> <span class="name">---</span> <span>0</span></li>
+                    <li><span class="rank">2.</span> <span class="name">---</span> <span>0</span></li>
+                    <li><span class="rank">3.</span> <span class="name">---</span> <span>0</span></li>
+                    <li><span class="rank">4.</span> <span class="name">---</span> <span>0</span></li>
+                    <li><span class="rank">5.</span> <span class="name">---</span> <span>0</span></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        nextCtx.imageSmoothingEnabled = false;
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const PREVIEW_BLOCK_SIZE = 20;
+        // Dark themed 8-bit colors with more vibrant, arcade-style palette
+        const COLORS = {
+            0: '#0f0f0f', // Empty
+            1: '#00ffff', // I - Cyan (electric)
+            2: '#ffff00', // O - Yellow (bright)
+            3: '#ff00ff', // T - Purple/Magenta (hot pink)
+            4: '#00ff00', // S - Green (neon)
+            5: '#ff0040', // Z - Red (vivid)
+            6: '#0080ff', // J - Blue (electric)
+            7: '#ff8800'  // L - Orange (arcade)
+        };
+        // Tetromino shapes
+        const SHAPES = [
+            [[1],[1],[1],[1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]], // Z
+            [[1,0,0],[1,1,1]], // J
+            [[0,0,1],[1,1,1]]  // L
+        ];
+        // Validate shapes on load
+        SHAPES.forEach((shape, i) => {
+            if (!shape || shape.length === 0 || !shape[0]) {
+                console.error('Invalid shape at index', i);
+            }
+        });
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        let nextPiece = null;
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropTime = 0;
+        let lastTime = 0;
+        let gameOverDelay = false;
+        let highScores = [];
+        let newHighScoreIndex = -1;
+        // Audio context for 8-bit sounds
+        let audioContext = null;
+        // MIDI Player Integration - Using shorter base64
+        const midiBase64 = "TVRoZAAAAAYAAQACAYBNVHJrAAAdaAD/WAQEAhgIAP9RAwYagAD/AxVHcmFuZCBQaWFubyAoQ2xhc3NpYykAwAAAkEwyAJAoMgCQKDIAkCgyYIAoAACAKABggCgAAJA0MgCQNDIAkDQyYIA0AACANABggDQAAIBMAACQRzIAkCgyAJAoMgCQKDJggCgAAIAoAGCAKAAAgEcAAJBIMgCQNDIAkDQyAJA0MmCANAAAgDQAYIA0AACASAAAkEoyAJAoMoFAgCgAAIBKAACQTDIAkDQyAJA0MmCANAAAgEwAAJBKMmCASgAAgDQAAJBIMgCQKDKBQIAoAACASAAAkEcyAJA0MgCQNDJggDQAYIA0AACARwAAkEUyAJAtMoFAgC0AAJA5MgCQOTIAkDkyYIA5AACAOQBggDkAAIBFAACQRTIAkC0ygUCALQAAgEUAAJBIMgCQOTIAkDkyYIA5AGCAOQAAgEgAAJBMMgCQLTKBQIAtAACQOTIAkDkyYIA5AGCAOQAAgEwAAJBKMgCQLTKBQIAtAACASgAAkEgyAJA5MgCQOTJggDkAYIA5AACASAAAkEcyAJAsMoFAgCwAAJA4MgCQODIAkDgyYIA4AACAOABggDgAAIBHAACQRzIAkCwyYIBHAACQRzJggEcAAIAsAACQSDIAkDgyAJA4MmCAOABggDgAAIBIAACQSjIAkCgygUCAKAAAkDQyAJA0MgCQNDJggDQAAIA0AGCANAAAgEoAAJBMMgCQKDKBQIAoAACQNDIAkDQyYIA0AGCANAAAgEwAAJBIMgCQLTKBQIAtAACQOTIAkDkyAJA5MgCQOTJggDkAAIA5AACAOQBggDkAAIBIAACQRTIAkC0ygUCALQAAkDkyAJA5MmCAOQBggDkAAIBFAACQRTIAkC0yAJAtMgCQLTJggC0AAIAtAGCALQAAkC8yAJAvMgCQLzJggC8AAIAvAGCALwAAkDAyAJAwMgCQMDJggDAAAIAwAGCAMAAAkDIyAJAyMgCQMjJggDIAAIAyAGCAMgAAgEUAAJAmMgCQSjIAkCYyYIAmAGCAJgAAkDIyAJAyMmCAMgBggDIAAIBKAACQJjIAkEoyAJAmMmCAJgBggEoAAIAmAACQMjIAkE0yAJAyMmCAMgBggE0AAIAyAACQJjIAkFEyAJAmMmCAJgBggCYAAJAyMgCQMjJggDIAYIAyAACAUQAAkCYyAJBPMgCQJjJggCYAYIBPAACAJgAAkDIyAJBNMgCQMjJggDIAYIBNAACAMgAAkCQyAJBMMgCQJDIAkCQyYIAkAACAJABggCQAAJAwMgCQMDIAkDAyYIAwAACAMABggDAAAIBMAACQJDIAkEwyAJAkMmCAJABggEwAAIAkAACQMDIAkEgyAJAwMmCAMABggEgAAIAwAACQJDIAkEwyAJAkMmCAJABggCQAAJAwMgCQMDJggDAAYIAwAACATAAAkCQyAJBKMgCQJDJggCQAYIBKAACAJAAAkDAyAJBIMgCQMDJggDAAYIBIAACAMAAAkB8yAJBHMoFAgB8AAJAqMoFAgCoAAIBHAACQHzIAkEcyYIBHAACQRzJggEcAAIAfAACQKjIAkEgygUCASAAAgCoAAJAoMgCQSjKBQIAoAACQNDKBQIA0AACASgAAkCgyAJBMMoFAgCgAAJA0MoFAgDQAAIBMAACQLTIAkEgygUCALQAAkDkygUCAOQAAgEgAAJAtMgCQRTKBQIAtAACQOTKBQIA5AACARQAAkC0yAJBFMoFAgC0AAJA5MoFAgDkAAJAtMoMAgC0AAIBFAACQKDIAkEwyAJAoMgCQKDJggCgAAIAoAGCAKAAAkDQyAJA0MgCQNDJggDQAAIA0AGCANAAAgEwAAJAoMgCQRzIAkCgyAJAoMmCAKAAAgCgAYIBHAACAKAAAkDQyAJBIMoFAgEgAAIA0AACQKDIAkEoyAJAoMgCQKDJggCgAAIAoAGCASgAAgCgAAJA0MgCQTDIAkDQyYIA0AACATAAAkEoyYIBKAACANAAAkCgyAJBIMgCQKDIAkCgyYIAoAACAKABggEgAAIAoAACQNDIAkEcyAJA0MmCANABggEcAAIA0AACQLTIAkEUyAJAtMgCQLTJggC0AAIAtAGCALQAAkDkyAJA5MmCAOQBggDkAAIBFAACQLTIAkEUyAJAtMgCQLTJggC0AAIAtAGCARQAAgC0AAJA5MgCQSDIAkDkyYIA5AGCASAAAgDkAAJAtMgCQTDIAkC0yAJAtMmCALQAAgC0AYIAtAACQOTIAkDkyYIA5AGCAOQAAgEwAAJAtMgCQSjIAkC0yAJAtMmCALQAAgC0AYIBKAACALQAAkDkyAJBIMgCQOTJggDkAYIBIAACAOQAAkCwyAJBHMgCQLDIAkCwyYIAsAACALABggCwAAJA4MgCQODJggDgAYIA4AACARwAAkCwyAJBHMgCQLDIAkCwyYIAsAACALABggEcAAIAsAACQODIAkEgyAJA4MmCAOABggEgAAIA4AACQKDIAkEoyAJAoMgCQKDJggCgAAIAoAGCAKAAAkDQygUCANAAAgEoAAJAoMgCQTDIAkCgyAJAoMmCAKAAAgCgAYIAoAACQNDKBQIA0AACATAAAkC0yAJBIMgCQLTIAkC0yYIAtAACALQBggC0AAJA5MoFAgDkAAIBIAACQLTIAkEUyAJAtMgCQLTJggC0AAIAtAGCALQAAkDkygUCAOQAAgEUAAJAtMgCQRTKBQIAtAACQLzKBQIAvAACQMDKBQIAwAACQMjKBQIAyAACARQAAkCYyAJBKMoFAgCYAAJAyMoFAgDIAAIBKAACQJjIAkEoygUCASgAAgCYAAJAyMgCQTTKBQIBNAACAMgAAkCYyAJBRMoFAgCYAAJAyMoFAgDIAAIBRAACQJjIAkE8ygUCATwAAgCYAAJAyMgCQTTKBQIBNAACAMgAAkCQyAJBMMgCQJDIAkCQyAJAkMmCAJAAAgCQAAIAkAGCAJAAAkDAyAJAwMmCAMABggDAAAIBMAACQJDIAkEwyAJAkMgCQJDJggCQAAIAkAGCATAAAgCQAAJAwMgCQSDIAkDAyYIAwAGCASAAAgDAAAJAkMgCQTDIAkCQyAJAkMmCAJAAAgCQAYIAkAACQMDIAkDAyYIAwAGCAMAAAgEwAAJAkMgCQSjIAkCQyAJAkMmCAJAAAgCQAYIBKAACAJAAAkDAyAJBIMgCQMDJggDAAYIBIAACAMAAAkB8yAJBHMoFAgB8AAJArMoFAgCsAAIBHAACQHzIAkEcygUCARwAAgB8AAJArMgCQSDKBQIBIAACAKwAAkCgyAJBKMoFAgCgAAJA0MoFAgDQAAIBKAACQKDIAkEwygUCAKAAAkDQygUCANAAAgEwAAJAtMgCQSDKBQIAtAACQOTKBQIA5AACASAAAkC0yAJBFMoFAgC0AAJA5MoFAgDkAAIBFAACQLTIAkEUygUCALQAAkDkygUCAOQAAkC0ygwCALQAAgEUAAJBIMgCQTDIAkC0ygUCALQAAkDQygUCANAAAkC0ygUCALQAAkDQygUCANAAAgEwAAIBIAACQSDIAkEUyAJAtMoFAgC0AAJA0MoFAgDQAAJAtMoFAgC0AAJA0MoFAgDQAAIBFAACASAAAkEoyAJBHMgCQLzKBQIAvAACQMjKBQIAyAACQLzKBQIAvAACQMjKBQIAyAACARwAAgEoAAJBHMgCQRDIAkC8ygUCALwAAkDIygUCAMgAAkC8ygUCALwAAkDIygUCAMgAAgEQAAIBHAACQSDIAkEUyAJAtMoFAgC0AAJA0MoFAgDQAAJAtMoFAgC0AAJA0MoFAgDQAAIBFAACASAAAkEUyAJBAMgCQLTKBQIAtAACQNDKBQIA0AACQLTKBQIAtAACQNDKBQIA0AACAQAAAgEUAAJBAMgCQRDIAkCwygUCALAAAkDQygUCANAAAkCwygUCALAAAkDQygUCANAAAgEQAAIBAAACQRDIAkEcyAJAsMoFAgCwAAJA0MoFAgDQAAJAsMoFAgCwAAJA0MoFAgDQAAIBHAACARAAAkEgyAJBMMgCQLTKBQIAtAACQNDKBQIA0AACQLTKBQIAtAACQNDKBQIA0AACATAAAgEgAAJBIMgCQRTIAkC0ygUCALQAAkDQygUCANAAAkC0ygUCALQAAkDQygUCANAAAgEUAAIBIAACQRzIAkEoyAJAvMoFAgC8AAJAyMoFAgDIAAJAvMoFAgC8AAJAyMoFAgDIAAIBKAACARwAAkEcyAJBEMgCQLzKBQIAvAACQMjKBQIAyAACQLzKBQIAvAACQMjKBQIAyAACARAAAgEcAAJBIMgCQRTIAkC0ygUCALQAAkDQygUCANAAAgEUAAIBIAACQSDIAkEwyAJAtMoFAgC0AAJA0MoFAgDQAAIBMAACASAAAkEwyAJBRMgCQLTKBQIAtAACQNDKBQIA0AACAUQAAgEwAAJBRMgCQTDIAkC0ygUCALQAAkDQygUCANAAAgEwAAIBRAACQTDIAkFAyAJAsMoFAgCwAAJA0MoFAgDQAAJAsMoFAgCwAAJA0MoFAgDQAAJAsMoMAgCwAAJAsMoMAgCwAAIBQAACATAAAkCgyAJBMMgCQRzIAkCgyAJAoMgCQKDJggCgAAIAoAACAKABggCgAAJA0MgCQNDIAkDQyYIA0AACANABggDQAAIBHAACATAAAkCgyAJBHMgCQRDIAkCgyAJAoMmCAKAAAgCgAYIBEAACARwAAgCgAAJA0MgCQSDIAkEUyAJA0MgCQNDJggDQAAIA0AGCARQAAgEgAAIA0AACQKDIAkEoyAJBHMgCQKDIAkCgyYIAoAACAKABggEcAAIBKAACAKAAAkDQyAJBMMgCQNDJggDQAAIBMAACQSjJggEoAAIA0AACQKDIAkEgyAJBFMgCQKDIAkCgyYIAoAACAKABggEUAAIBIAACAKAAAkDQyAJBEMgCQRzIAkDQyAJA0MmCANAAAgDQAYIBHAACARAAAgDQAAJAtMgCQRTIAkEAyAJAtMgCQLTJggC0AAIAtAGCALQAAkDkyAJA5MgCQOTJggDkAAIA5AGCAOQAAgEAAAIBFAACQLTIAkEUyAJBAMgCQLTIAkC0yYIAtAACALQBggEAAAIBFAACALQAAkDkyAJBFMgCQSDIAkDkyAJA5MmCAOQAAgDkAYIBIAACARQAAgDkAAJAtMgCQSDIAkEwyAJAtMgCQLTJggC0AAIAtAGCALQAAkDkyAJA5MmCAOQBggDkAAIBMAACASAAAkC0yAJBKMgCQRzIAkC0yAJAtMmCALQAAgC0AYIBHAACASgAAgC0AAJA5MgCQSDIAkEUyAJA5MmCAOQBggEUAAIBIAACAOQAAkCwyAJBHMgCQRDIAkCwyAJAsMmCALAAAgCwAYIBEAACARwAAgCwAAJA4MgCQQDIAkDgyYIA4AGCAQAAAgDgAAJAsMgCQRDIAkCwyAJAsMmCALAAAgCwAAIBEAACQRDJggEQAAIAsAACQODIAkEgyAJA4MmCAOABggEgAAIA4AACQKDIAkEcyAJBKMgCQKDIAkCgyYIAoAACAKABggCgAAJA0MgCQNDJggDQAYIA0AACASgAAgEcAAJAoMgCQSDIAkEwyAJAoMgCQKDJggCgAAIAoAGCAKAAAkDQyAJA0MmCANABggDQAAIBMAACASAAAkC0yAJBIMgCQRTIAkC0yAJAtMmCALQAAgC0AYIAtAACQOTKBQIA5AACARQAAgEgAAJAtMgCQRTIAkEAyAJAtMgCQLTJggC0AAIAtAGCALQAAkDkygUCAOQAAgEAAAIBFAACQLTIAkEUyAJBAMgCQLTIAkC0yYIAtAACALQBggC0AAJAvMgCQLzIAkC8yYIAvAACALwBggC8AAJAwMgCQMDIAkDAyYIAwAACAMABggDAAAJAyMgCQMjIAkDIyYIAyAACAMgBggDIAAIBAAACARQAAkEEyAJBKMgCQJjIAkCYyAJAmMmCAJgAAgCYAYIAmAACQMjKBQIAyAACASgAAgEEAAJBKMgCQQTIAkCYyAJAmMgCQJjJggCYAAIAmAGCAJgAAgEEAAIBKAACQRTIAkE0yAJAyMoFAgDIAAIBNAACARQAAkEgyAJBRMgCQJjIAkCYyAJAmMmCAJgAAgCYAYIAmAACQMjKBQIAyAACAUQAAgEgAAJBHMgCQTzIAkCYyAJAmMgCQJjJggCYAAIAmAGCAJgAAgE8AAIBHAACQTTIAkEUyAJAyMoFAgDIAAIBFAACATQAAkEMyAJBMMgCQJDIAkCQyYIAkAGCAJAAAkDAygUCAMAAAgEwAAIBDAACQQzIAkEwyAJAkMgCQJDIAkCQyYIAkAACAJABggCQAAIBMAACAQwAAkEAyAJBIMgCQMDKBQIAwAACASAAAgEAAAJBMMgCQQzIAkCQyAJAkMgCQJDJggCQAAIAkAGCAJAAAkDAygUCAMAAAgEMAAIBMAACQQTIAkEoyAJAkMgCQJDIAkCQyYIAkAACAJABggCQAAIBKAACAQQAAkEgyAJBAMgCQMDKBQIAwAACAQAAAgEgAAJBHMgCQRDIAkCwyAJAsMgCQLDJggCwAAIAsAGCALAAAgEQAAIBHAACQQDIAkDgygUCAOAAAgEAAAJBEMgCQLDIAkCwyAJAsMmCALAAAgCwAAIBEAACQRDJggEQAAIAsAACQSDIAkDgygUCAOAAAgEgAAJBKMgCQRzIAkCgyAJAoMgCQKDJggCgAAIAoAGCAKAAAkDQygUCANAAAgEcAAIBKAACQSDIAkEwyAJAoMgCQKDIAkCgyYIAoAACAKABggCgAAJA0MoFAgDQAAIBMAACASAAAkEgyAJBFMgCQLTIAkC0yAJAtMmCALQAAgC0AYIAtAACQOTKBQIA5AACARQAAgEgAAJBFMgCQQDIAkC0yAJAtMgCQLTJggC0AAIAtAGCALQAAkDkygUCAOQAAgEAAAIBFAACQQDIAkEUyAJAtMgCQLTIAkC0yYIAtAACALQBggC0AAJA5MoFAgDkAAJAtMgCQLTIAkC0yYIAtAACALQCCIIAtAACARQAAgEAAAJAoMgCQRzIAkEwyAJAoMgCQKDJggCgAAIAoAGCAKAAAkDQyAJA0MmCANABggDQAAIBMAACARwAAkCgyAJBHMgCQRDIAkCgyAJAoMmCAKAAAgCgAYIBEAACARwAAgCgAAJA0MgCQRTIAkEgyAJA0MmCANABggEgAAIBFAACANAAAkCgyAJBHMgCQSjIAkCgyAJAoMmCAKAAAgCgAYIBKAACARwAAgCgAAJA0MgCQTDIAkDQyYIA0AACATAAAkEoyYIBKAACANAAAkCgyAJBIMgCQRTIAkCgyAJAoMmCAKAAAgCgAYIBFAACASAAAgCgAAJA0MgCQRzIAkEQyAJA0MmCANABggEQAAIBHAACANAAAkC0yAJBFMgCQQDKBQIAtAACQOTKBQIA5AACAQAAAgEUAAJAtMgCQRTIAkEAygUCAQAAAgEUAAIAtAACQOTIAkEUyAJBIMoFAgEgAAIBFAACAOQAAkC0yAJBIMgCQTDKBQIAtAACQOTKBQIA5AACATAAAgEgAAJAtMgCQSjIAkEcygUCARwAAgEoAAIAtAACQOTIAkEgyAJBFMoFAgEUAAIBIAACAOQAAkCwyAJBHMgCQRDKBQIBEAACARwAAgCwAAJA4MgCQQDKBQIBAAACAOAAAkCwyAJBEMmCARAAAkEQyYIBEAACALAAAkDgyAJBIMoFAgEgAAIA4AACQKDIAkEoyAJBHMoFAgCgAAJA0MoFAgDQAAIBHAACASgAAkCgyAJBIMgCQTDKBQIAoAACQNDKBQIA0AACATAAAgEgAAJAtMgCQSDIAkEUygUCALQAAkDkygUCAOQAAgEUAAIBIAACQLTIAkEUyAJBAMoFAgC0AAJA5MoFAgDkAAIBAAACARQAAkC0yAJBAMgCQRTKBQIAtAACQLzKBQIAvAACQMDKBQIAwAACQMjKBQIAyAACARQAAgEAAAJAmMgCQQTIAkEoygUCAJgAAkDIygUCAMgAAgEoAAIBBAACQJjIAkEoyAJBBMoFAgEEAAIBKAACAJgAAkDIyAJBFMgCQTTKBQIBNAACARQAAgDIAAJAmMgCQUTIAkEgygUCAJgAAkDIygUCAMgAAgEgAAIBRAACQJjIAkE8yAJBHMoFAgEcAAIBPAACAJgAAkDIyAJBFMgCQTTKBQIBNAACARQAAgDIAAJAkMgCQQzIAkEwygUCAJAAAkDAygUCAMAAAgEwAAIBDAACQJDIAkEMyAJBMMoFAgEwAAIBDAACAJAAAkDAyAJBIMgCQQDKBQIBAAACASAAAgDAAAJAkMgCQQzIAkEwygUCAJAAAkDAygUCAMAAAgEwAAIBDAACQJDIAkEoyAJBBMoFAgEEAAIBKAACAJAAAkDAyAJBAMgCQSDKBQIBIAACAQAAAgDAAAJAsMgCQRzIAkEQygUCARAAAgEcAAIAsAACQODIAkEAygUCAQAAAgDgAAJAsMgCQRDJggEQAAJBEMmCARAAAgCwAAJA4MgCQSDKBQIBIAACAOAAAkCgyAJBKMgCQRzKBQIAoAACQNDKBQIA0AACARwAAgEoAAJAoMgCQSDIAkEwygUCAKAAAkDQygUCANAAAgEwAAIBIAACQLTIAkEgyAJBFMoFAgC0AAJA5MoFAgDkAAIBFAACASAAAkC0yAJBFMgCQQDKBQIAtAACQOTKBQIA5AACAQAAAgEUAAJAtMgCQRTIAkEAygUCALQAAkDkygUCAOQAAkC0ygwCALQAAgEAAAIBFAACQLTIAkEAyAJA8MoFAgC0AAJA0MoFAgDQAAJAtMoFAgC0AAJA0MoFAgDQAAIA8AACAQAAAkC0yAJA8MgCQOTKBQIAtAACQNDKBQIA0AACQLTKBQIAtAACQNDKBQIA0AACAOQAAgDwAAJAvMgCQOzIAkD4ygUCALwAAkDIygUCAMgAAkC8ygUCALwAAkDIygUCAMgAAgD4AAIA7AACQLzIAkDsyAJA4MoFAgC8AAJAyMoFAgDIAAJAvMoFAgC8AAJAyMoFAgDIAAIA4AACAOwAAkC0yAJA5MgCQPDKBQIAtAACQNDKBQIA0AACQLTKBQIAtAACQNDKBQIA0AACAPAAAgDkAAJAtMgCQOTIAkDQygUCALQAAkDQygUCANAAAkC0ygUCALQAAkDQygUCANAAAgDQAAIA5AACQLDIAkDQyAJA4MoFAgCwAAJA0MoFAgDQAAJAsMoFAgCwAAJA0MoFAgDQAAIA4AACANAAAkCwyAJA4MgCQOzKBQIAsAACQNDKBQIA0AACQLDKBQIAsAACQNDKBQIA0AACAOwAAgDgAAJAtMgCQPDIAkEAygUCALQAAkDQygUCANAAAkC0ygUCALQAAkDQygUCANAAAgEAAAIA8AACQLTIAkDwyAJA5MoFAgC0AAJA0MoFAgDQAAJAtMoFAgC0AAJA0MoFAgDQAAIA5AACAPAAAkC8yAJA7MgCQPjKBQIAvAACQMjKBQIAyAACQLzKBQIAvAACQMjKBQIAyAACAPgAAgDsAAJAvMgCQOzIAkDgygUCALwAAkDIygUCAMgAAkC8ygUCALwAAkDIygUCAMgAAgDgAAIA7AACQLTIAkDkyAJA8MoFAgC0AAJA0MoFAgDQAAIA8AACAOQAAkC0yAJA8MgCQQDKBQIAtAACQNDKBQIA0AACAQAAAgDwAAJAtMgCQQDIAkEUygUCALQAAkDQygUCANAAAgEUAAIBAAACQLTIAkEAyAJBFMoFAgC0AAJA0MoFAgDQAAIBFAACAQAAAkCwyAJBAMgCQRDKBQIAsAACQNDKBQIA0AACQLDKBQIAsAACQNDKBQIA0AACQLDKBQIAsAACQNDKBQIA0AACQLDKBQIAsAACQNDKBQIA0AACARAAAgEAAgUCQNzJggDcAAJA7MmCAOwBgkD4yYIA+AIFAkEEyYIBBAIIgkEUyYIBFAACQLDIAkDIyAJAmMmCAJgAAgDIAAIAsAAD/LwBNVHJrAAAAKgD/AxVFbGVjLiBQaWFubyAoQ2xhc3NpYykAwQCCn2qRJDJggSQAAP8vAA==";
+        let midiCtx = null, midiPlaying = false, midiStartTime, midiEvents = [], midiIdx = 0, midiTimer, midiNotes = new Map();
+        let volumeLevel = 100;
+        let volumeGain = null;
+        // Load high scores from localStorage
+        function loadHighScores() {
+            try {
+                const stored = localStorage.getItem('tetrisHighScores');
+                if (stored) {
+                    highScores = JSON.parse(stored);
+                } else {
+                    highScores = [
+                        {name: '---', score: 0},
+                        {name: '---', score: 0},
+                        {name: '---', score: 0},
+                        {name: '---', score: 0},
+                        {name: '---', score: 0}
+                    ];
+                }
+            } catch(e) {
+                highScores = [
+                    {name: '---', score: 0},
+                    {name: '---', score: 0},
+                    {name: '---', score: 0},
+                    {name: '---', score: 0},
+                    {name: '---', score: 0}
+                ];
+            }
+            displayHighScores();
+        }
+        // Save high scores to localStorage
+        function saveHighScores() {
+            try {
+                localStorage.setItem('tetrisHighScores', JSON.stringify(highScores));
+            } catch(e) {
+                console.warn('Could not save high scores to localStorage');
+            }
+        }
+        // Display high scores
+        function displayHighScores() {
+            const list = document.getElementById('highScoresList');
+            list.innerHTML = '';
+            highScores.forEach((score, i) => {
+                const li = document.createElement('li');
+                if (i === newHighScoreIndex) {
+                    li.className = 'current';
+                }
+                li.innerHTML = `<span class="rank">${i + 1}.</span> <span class="name">${score.name}</span> <span>${score.score}</span>`;
+                list.appendChild(li);
+            });
+        }
+        // Check if score is a high score
+        function checkHighScore(score) {
+            for (let i = 0; i < highScores.length; i++) {
+                if (score > highScores[i].score) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+        // Submit high score
+        function submitHighScore() {
+            // Prevent double submission
+            if (newHighScoreIndex === -1) return;
+            // --- Fixed name handling ---
+            // Get raw values, convert to uppercase, handle empty strings
+            let rawChar1 = document.getElementById('char1').value;
+            let rawChar2 = document.getElementById('char2').value;
+            let rawChar3 = document.getElementById('char3').value;
+            // Handle empty inputs: use space if empty, otherwise take first char and uppercase
+            const char1 = (rawChar1 === '') ? ' ' : rawChar1.charAt(0).toUpperCase();
+            const char2 = (rawChar2 === '') ? ' ' : rawChar2.charAt(0).toUpperCase();
+            const char3 = (rawChar3 === '') ? ' ' : rawChar3.charAt(0).toUpperCase();
+            // Trim trailing spaces for the final name, but keep internal spaces if needed
+            // Or, simply join and trim if you want "MR " -> "MR"
+            // For "AAA" default, you might want to check if all were empty:
+            let name;
+            if (rawChar1 === '' && rawChar2 === '' && rawChar3 === '') {
+                name = '---'; // Default name if all empty
+            } else {
+                name = char1 + char2 + char3;
+            }
+            // --- End of fix ---
+            highScores.splice(newHighScoreIndex, 0, {name: name, score: score});
+            highScores = highScores.slice(0, 5);
+            saveHighScores();
+            // Reset the highlight index before displaying
+            const tempIndex = newHighScoreIndex;
+            newHighScoreIndex = -1;
+            displayHighScores();
+            // Briefly highlight the new score
+            setTimeout(() => {
+                const list = document.getElementById('highScoresList');
+                if (list.children[tempIndex]) {
+                    list.children[tempIndex].classList.add('current');
+                    setTimeout(() => {
+                        list.children[tempIndex].classList.remove('current');
+                    }, 2000);
+                }
+            }, 100);
+            document.getElementById('nameEntry').classList.remove('show');
+        }
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        // MIDI Functions
+        function initMidi() {
+            if (!midiCtx) {
+                midiCtx = new (AudioContext || webkitAudioContext)();
+                volumeGain = midiCtx.createGain();
+                volumeGain.gain.value = volumeLevel / 100;
+                volumeGain.connect(midiCtx.destination);
+            }
+        }
+        function parseMidi() {
+            const bytes = Uint8Array.from(atob(midiBase64), c => c.charCodeAt(0));
+            if (String.fromCharCode(...bytes.slice(0, 4)) !== 'MThd') throw 'Invalid MIDI';
+            const [numTracks, ppq] = [bytes[10] << 8 | bytes[11], bytes[12] << 8 | bytes[13]];
+            let offset = 14, tempo = 120;
+            midiEvents = [];
+            for (let t = 0; t < numTracks && offset < bytes.length; t++) {
+                offset += 4;
+                const len = (bytes[offset]<<24)|(bytes[offset+1]<<16)|(bytes[offset+2]<<8)|bytes[offset+3];
+                offset += 4;
+                const data = bytes.slice(offset, offset + len);
+                offset += len;
+                let time = 0, status = 0;
+                for (let i = 0; i < data.length;) {
+                    let delta = 0, b;
+                    do { b = data[i++]; delta = (delta << 7) | (b & 0x7F); } while (b & 0x80);
+                    time += delta;
+                    let s = data[i++];
+                    if (s < 0x80) { i--; s = status; } else status = s;
+                    const type = s & 0xF0, ch = s & 0x0F;
+                    if (type === 0x80 || type === 0x90) {
+                        const [note, vel] = [data[i++], data[i++]];
+                        midiEvents.push({ type: (type === 0x90 && vel) ? 'on' : 'off', t: time, ch, note, vel });
+                    } else if (s === 0xFF) {
+                        const meta = data[i++], len = data[i++];
+                        if (meta === 0x51 && len >= 3) tempo = Math.round(6e7 / ((data[i]<<16)|(data[i+1]<<8)|data[i+2]));
+                        i += len;
+                    } else i += (type === 0xC0 || type === 0xD0) ? 1 : 2;
+                }
+            }
+            const secPerTick = (60 / tempo) / ppq;
+            midiEvents.forEach(e => e.t *= secPerTick);
+            midiEvents.sort((a, b) => a.t - b.t);
+        }
+        function startMidi() {
+            // Clean up any existing playback first
+            stopMidi();
+            if (!midiCtx) initMidi();
+            if (midiCtx.state === 'suspended') midiCtx.resume();
+            if (!midiEvents.length) {
+                try { 
+                    parseMidi(); 
+                } catch(e) { 
+                    console.error('MIDI parse error:', e);
+                    return; 
+                }
+            }
+            midiPlaying = true;
+            midiStartTime = midiCtx.currentTime;
+            midiIdx = 0;
+            scheduleMidi();
+        }
+        function stopMidi() {
+            midiPlaying = false;
+            clearTimeout(midiTimer);
+            // Stop all playing notes immediately
+            const now = midiCtx ? midiCtx.currentTime : 0;
+            midiNotes.forEach(o => { 
+                try { 
+                    o.stop(now + 0.01); 
+                } catch {} 
+            });
+            midiNotes.clear();
+        }
+        function scheduleMidi() {
+            if (!midiPlaying || !midiEvents || midiEvents.length === 0) return;
+            // If we've played all events, restart from beginning
+            if (midiIdx >= midiEvents.length) {
+                midiIdx = 0;
+                midiStartTime = midiCtx.currentTime;
+            }
+            const now = midiCtx.currentTime;
+            const elapsed = now - midiStartTime;
+            // Process all events that should have played by now
+            while (midiIdx < midiEvents.length && midiEvents[midiIdx].t <= elapsed) {
+                const event = midiEvents[midiIdx++];
+                if (event) handleMidi(event, 0);
+            }
+            // Schedule next check
+            if (midiPlaying) {
+                if (midiIdx < midiEvents.length) {
+                    const nextEvent = midiEvents[midiIdx];
+                    const delay = Math.max(10, (midiStartTime + nextEvent.t - now) * 1000);
+                    midiTimer = setTimeout(scheduleMidi, Math.min(delay, 50));
+                } else {
+                    // Loop the music after a short delay
+                    midiTimer = setTimeout(scheduleMidi, 100);
+                }
+            }
+        }
+        function handleMidi(e, d) {
+            e.type === 'on' ? playMidiNote(e.note, e.vel / 127, d) : stopMidiNote(e.note, d);
+        }
+        function playMidiNote(note, vel, d) {
+            if (!midiCtx) return;
+            const now = midiCtx.currentTime;
+            const o = midiCtx.createOscillator();
+            const g = midiCtx.createGain();
+            // Use triangle wave for more authentic 8-bit sound
+            o.type = 'triangle';
+            o.frequency.value = 440 * Math.pow(2, (note - 69) / 12);
+            // Adjust gain for better sound
+            g.gain.setValueAtTime(vel * 0.15, now + d);
+            g.gain.exponentialRampToValueAtTime(0.001, now + d + 0.3);
+            o.connect(g).connect(volumeGain);
+            o.start(now + d);
+            o.stop(now + d + 0.3);
+            midiNotes.set(note, o);
+        }
+        function stopMidiNote(note, d = 0) {
+            const o = midiNotes.get(note);
+            if (!o) return;
+            try { 
+                o.stop(midiCtx.currentTime + d + 0.3); 
+            } catch {}
+            midiNotes.delete(note);
+        }
+        function cycleVolume() {
+            if (volumeLevel === 100) volumeLevel = 50;
+            else if (volumeLevel === 50) volumeLevel = 25;
+            else if (volumeLevel === 25) volumeLevel = 0;
+            else volumeLevel = 100;
+            if (volumeGain) {
+                volumeGain.gain.value = volumeLevel / 100;
+            }
+            const indicator = document.getElementById('volumeIndicator');
+            indicator.textContent = volumeLevel === 0 ? 'Muted' : `Volume: ${volumeLevel}%`;
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 1500);
+        }
+        function playSound(type) {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            switch(type) {
+                case 'rotate':
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.05);
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.05);
+                    break;
+                case 'drop':
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'clear1':
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.15);
+                    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.15);
+                    break;
+                case 'clear2':
+                    oscillator.type = 'square';
+                    for(let i = 0; i < 2; i++) {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(800 + i * 200, audioContext.currentTime + i * 0.05);
+                        osc.frequency.exponentialRampToValueAtTime(1400 + i * 200, audioContext.currentTime + 0.2);
+                        gain.gain.setValueAtTime(0.25, audioContext.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        osc.start(audioContext.currentTime + i * 0.05);
+                        osc.stop(audioContext.currentTime + 0.2);
+                    }
+                    break;
+                case 'clear3':
+                case 'clear4':
+                    for(let i = 0; i < 3; i++) {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(600 + i * 300, audioContext.currentTime + i * 0.08);
+                        osc.frequency.exponentialRampToValueAtTime(1600 + i * 200, audioContext.currentTime + 0.3);
+                        gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        osc.start(audioContext.currentTime + i * 0.08);
+                        osc.stop(audioContext.currentTime + 0.3);
+                    }
+                    break;
+            }
+        }
+        // --- Optimized createPixelExplosion function ---
+        function createPixelExplosion(row, intensity) {
+            const gameArea = document.querySelector('.game-area');
+            const maxParticles = 50; // Limit total particles to prevent overload
+            let particleCount = 0;
+            // Screen shake for multiple lines
+            if (intensity >= 2) {
+                gameArea.classList.remove('shake');
+                void gameArea.offsetWidth;
+                gameArea.classList.add('shake');
+                setTimeout(() => gameArea.classList.remove('shake'), 300);
+            }
+            // White flash overlay for big clears
+            if (intensity >= 3) {
+                const whiteFlash = document.createElement('div');
+                whiteFlash.className = 'white-flash active';
+                gameArea.appendChild(whiteFlash);
+                setTimeout(() => { if(whiteFlash.parentNode) whiteFlash.remove(); }, 200);
+            }
+            // Process each block in the row
+            for(let col = 0; col < COLS; col++) {
+                if (particleCount > maxParticles) break; // Stop if too many particles
+                const blockColor = (board[row] && board[row][col]) ? COLORS[board[row][col]] : '#ffffff';
+                const blockX = col * BLOCK_SIZE;
+                const blockY = row * BLOCK_SIZE;
+                // Simplified flashing block effect (only one per block)
+                const flashBlock = document.createElement('div');
+                flashBlock.className = 'block-flash';
+                flashBlock.style.left = blockX + 'px';
+                flashBlock.style.top = blockY + 'px';
+                flashBlock.style.width = BLOCK_SIZE + 'px';
+                flashBlock.style.height = BLOCK_SIZE + 'px';
+                flashBlock.style.setProperty('--color', blockColor);
+                gameArea.appendChild(flashBlock);
+                setTimeout(() => { if(flashBlock.parentNode) flashBlock.remove(); }, 300);
+                // Reduced density pixel explosion (2x2 grid per block max)
+                const gridSize = intensity > 1 ? 2 : 1; // Fewer particles for single line
+                const pixelBlockSize = BLOCK_SIZE / 4; // Fixed size for particles
+                for(let gx = 0; gx < gridSize && particleCount <= maxParticles; gx++) {
+                    for(let gy = 0; gy < gridSize && particleCount <= maxParticles; gy++) {
+                        particleCount++;
+                        const particle = document.createElement('div');
+                        particle.className = 'pixel-block';
+                        // Position within the block (centered for fewer particles)
+                        const pixelX = blockX + (BLOCK_SIZE / 2) - (pixelBlockSize / 2) + (gx - gridSize/2) * pixelBlockSize * 1.5;
+                        const pixelY = blockY + (BLOCK_SIZE / 2) - (pixelBlockSize / 2) + (gy - gridSize/2) * pixelBlockSize * 1.5;
+                        particle.style.left = pixelX + 'px';
+                        particle.style.top = pixelY + 'px';
+                        particle.style.width = pixelBlockSize + 'px';
+                        particle.style.height = pixelBlockSize + 'px';
+                        // Simplified explosion direction
+                        const dirX = (Math.random() - 0.5) * 2;
+                        const dirY = (Math.random() - 0.5) * 2;
+                        particle.style.setProperty('--gx', dirX);
+                        particle.style.setProperty('--gy', dirY);
+                        // Simpler color
+                        particle.style.background = blockColor;
+                        // Simplified inner shadow
+                        particle.style.boxShadow = `inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.3)`;
+                        // Stagger animation start
+                        particle.style.animationDelay = `${Math.random() * 50}ms`;
+                        gameArea.appendChild(particle);
+                        setTimeout(() => { if(particle.parentNode) particle.remove(); }, 500);
+                    }
+                }
+                // Simplified "pop" effect (max 1 per block)
+                if (intensity >= 2 && Math.random() > 0.5) {
+                    const pop = document.createElement('div');
+                    pop.className = 'pixel-pop';
+                    pop.style.left = (blockX + BLOCK_SIZE/2 - 5 + (Math.random() - 0.5) * 10) + 'px';
+                    pop.style.top = (blockY + BLOCK_SIZE/2 - 5 + (Math.random() - 0.5) * 10) + 'px';
+                    // pop.style.animationDelay = `0ms`; // No delay needed
+                    gameArea.appendChild(pop);
+                    setTimeout(() => { if(pop.parentNode) pop.remove(); }, 300);
+                }
+            }
+            // Add screen-wide effect for Tetris (4 lines) - Simplified
+            if (intensity === 4) {
+                 const scan = document.createElement('div');
+                 scan.className = 'scanline-effect';
+                 scan.style.animationDuration = `1.5s`;
+                 gameArea.appendChild(scan);
+                 setTimeout(() => { if(scan.parentNode) scan.remove(); }, 1500);
+            }
+        }
+        // --- End of optimized function ---
+        function initBoard() {
+            board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        }
+        function drawBlock(ctx, x, y, color, blockSize) {
+            const pixelSize = 2; // Size of individual "pixels" within the block
+            // Main block color
+            ctx.fillStyle = color;
+            ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+            // Create a checkerboard dither pattern for depth
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            for(let px = 0; px < blockSize; px += pixelSize * 2) {
+                for(let py = 0; py < blockSize; py += pixelSize * 2) {
+                    if ((px + py) % (pixelSize * 4) === 0) {
+                        ctx.fillRect(x * blockSize + px, y * blockSize + py, pixelSize, pixelSize);
+                    }
+                }
+            }
+            // Dark shadow (bottom and right edges)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            // Bottom edge
+            ctx.fillRect(x * blockSize, y * blockSize + blockSize - 3, blockSize, 3);
+            // Right edge
+            ctx.fillRect(x * blockSize + blockSize - 3, y * blockSize, 3, blockSize);
+            // Medium shadow for depth
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(x * blockSize + 3, y * blockSize + blockSize - 6, blockSize - 6, 3);
+            ctx.fillRect(x * blockSize + blockSize - 6, y * blockSize + 3, 3, blockSize - 6);
+            // Bright highlight (top and left edges)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            // Top edge
+            ctx.fillRect(x * blockSize, y * blockSize, blockSize - 3, 3);
+            // Left edge
+            ctx.fillRect(x * blockSize, y * blockSize, 3, blockSize - 3);
+            // Extra bright spot for 3D effect
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillRect(x * blockSize + 3, y * blockSize + 3, 6, 6);
+            // Center highlight for glossy effect
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(x * blockSize + 6, y * blockSize + 6, blockSize - 12, blockSize - 12);
+            // Pixel grid lines for authentic 8-bit look
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([pixelSize, pixelSize]);
+            ctx.strokeRect(x * blockSize + 0.5, y * blockSize + 0.5, blockSize - 1, blockSize - 1);
+            ctx.setLineDash([]);
+        }
+        function draw() {
+            // Dark background with subtle gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0f0f0f');
+            gradient.addColorStop(1, '#080808');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Draw grid lines with 8-bit style
+            for(let i = 0; i <= COLS; i++) {
+                // Alternating grid line brightness for depth
+                ctx.strokeStyle = i % 2 === 0 ? '#1a1a1a' : '#151515';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(i * BLOCK_SIZE, 0);
+                ctx.lineTo(i * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for(let i = 0; i <= ROWS; i++) {
+                ctx.strokeStyle = i % 2 === 0 ? '#1a1a1a' : '#151515';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, i * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, i * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            // Add subtle dot pattern at grid intersections
+            ctx.fillStyle = '#222222';
+            for(let i = 1; i < COLS; i++) {
+                for(let j = 1; j < ROWS; j++) {
+                    ctx.fillRect(i * BLOCK_SIZE - 1, j * BLOCK_SIZE - 1, 2, 2);
+                }
+            }
+            // Draw board
+            for(let row = 0; row < ROWS; row++) {
+                for(let col = 0; col < COLS; col++) {
+                    if(board[row] && board[row][col]) {
+                        drawBlock(ctx, col, row, COLORS[board[row][col]], BLOCK_SIZE);
+                    }
+                }
+            }
+            // Draw current piece (only visible parts)
+            if(currentPiece && currentPiece.shape) {
+                for(let row = 0; row < currentPiece.shape.length; row++) {
+                    for(let col = 0; col < currentPiece.shape[row].length; col++) {
+                        if(currentPiece.shape[row][col]) {
+                            const y = currentPiece.y + row;
+                            const x = currentPiece.x + col;
+                            // Only draw if piece is within visible board area
+                            if(y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                                drawBlock(ctx, x, y, COLORS[currentPiece.color], BLOCK_SIZE);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        function drawNextPiece() {
+            // Dark background with gradient
+            const gradient = nextCtx.createLinearGradient(0, 0, 0, nextCanvas.height);
+            gradient.addColorStop(0, '#0f0f0f');
+            gradient.addColorStop(1, '#080808');
+            nextCtx.fillStyle = gradient;
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            // Draw subtle grid
+            nextCtx.strokeStyle = '#151515';
+            nextCtx.lineWidth = 1;
+            for(let i = 0; i <= 5; i++) {
+                nextCtx.beginPath();
+                nextCtx.moveTo(i * PREVIEW_BLOCK_SIZE, 0);
+                nextCtx.lineTo(i * PREVIEW_BLOCK_SIZE, nextCanvas.height);
+                nextCtx.stroke();
+            }
+            for(let i = 0; i <= 4; i++) {
+                nextCtx.beginPath();
+                nextCtx.moveTo(0, i * PREVIEW_BLOCK_SIZE);
+                nextCtx.lineTo(nextCanvas.width, i * PREVIEW_BLOCK_SIZE);
+                nextCtx.stroke();
+            }
+            if(nextPiece && nextPiece.shape) {
+                // Special centering for I and O pieces
+                let offsetX, offsetY;
+                if(nextPiece.shape.length === 1 && nextPiece.shape[0].length === 4) {
+                    // I piece - center horizontally
+                    offsetX = 0.5;
+                    offsetY = 1.5;
+                } else if(nextPiece.shape.length === 2 && nextPiece.shape[0].length === 2) {
+                    // O piece - center both ways
+                    offsetX = 1.5;
+                    offsetY = 1;
+                } else {
+                    // Other pieces
+                    offsetX = Math.floor((nextCanvas.width / PREVIEW_BLOCK_SIZE - nextPiece.shape[0].length) / 2);
+                    offsetY = Math.floor((nextCanvas.height / PREVIEW_BLOCK_SIZE - nextPiece.shape.length) / 2);
+                }
+                for(let row = 0; row < nextPiece.shape.length; row++) {
+                    for(let col = 0; col < nextPiece.shape[row].length; col++) {
+                        if(nextPiece.shape[row][col]) {
+                            drawBlock(nextCtx, offsetX + col, offsetY + row, COLORS[nextPiece.color], PREVIEW_BLOCK_SIZE);
+                        }
+                    }
+                }
+            }
+        }
+        function createPiece() {
+            const typeId = Math.floor(Math.random() * SHAPES.length);
+            const shape = SHAPES[typeId];
+            if (!shape || shape.length === 0) {
+                console.error('Invalid shape at index:', typeId);
+                return createPiece(); // Try again
+            }
+            // Find the lowest row with a block in the shape
+            let lowestBlockRow = shape.length - 1;
+            for(let row = shape.length - 1; row >= 0; row--) {
+                if(shape[row].some(cell => cell === 1)) {
+                    lowestBlockRow = row;
+                    break;
+                }
+            }
+            return {
+                shape: JSON.parse(JSON.stringify(shape)), // Deep copy to avoid reference issues
+                color: typeId + 1,
+                x: Math.floor((COLS - shape[0].length) / 2),
+                y: -(lowestBlockRow + 1) // Position so bottom of piece is just above board
+            };
+        }
+        function collision(piece, dx = 0, dy = 0) {
+            if (!piece || !piece.shape) return true;
+            for(let row = 0; row < piece.shape.length; row++) {
+                for(let col = 0; col < piece.shape[row].length; col++) {
+                    if(piece.shape[row][col]) {
+                        const newX = piece.x + col + dx;
+                        const newY = piece.y + row + dy;
+                        if(newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+                        if(newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        function checkGameOver(piece) {
+            if (!piece || !piece.shape) return true;
+            // Check if the piece at its spawn position will collide with existing blocks
+            // when it enters the visible board area (y >= 0)
+            for(let row = 0; row < piece.shape.length; row++) {
+                for(let col = 0; col < piece.shape[row].length; col++) {
+                    if(piece.shape[row][col]) {
+                        const boardY = piece.y + row;
+                        const boardX = piece.x + col;
+                        // Check if this block of the piece will be on the visible board
+                        if(boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+                            // If there's already a block here, game over
+                            if(board[boardY][boardX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            // Also check if piece can't move down at all from spawn
+            if(collision(piece, 0, 1)) {
+                // Check if any part of the piece is still above the board
+                for(let row = 0; row < piece.shape.length; row++) {
+                    for(let col = 0; col < piece.shape[row].length; col++) {
+                        if(piece.shape[row][col]) {
+                            const boardY = piece.y + row;
+                            if(boardY < 0) {
+                                // Piece is stuck above the board - game over
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        function merge() {
+            if (!currentPiece || !currentPiece.shape) return;
+            for(let row = 0; row < currentPiece.shape.length; row++) {
+                for(let col = 0; col < currentPiece.shape[row].length; col++) {
+                    if(currentPiece.shape[row][col]) {
+                        const y = currentPiece.y + row;
+                        const x = currentPiece.x + col;
+                        if(y >= 0 && y < ROWS && x >= 0 && x < COLS && board[y]) {
+                            board[y][x] = currentPiece.color;
+                        }
+                    }
+                }
+            }
+        }
+        function rotate() {
+            if (!currentPiece || !currentPiece.shape || currentPiece.shape.length === 0 || !currentPiece.shape[0]) return;
+            try {
+                const rotated = currentPiece.shape[0].map((_, i) =>
+                    currentPiece.shape.map(row => row[i]).reverse()
+                );
+                const previousShape = currentPiece.shape;
+                currentPiece.shape = rotated;
+                if(collision(currentPiece)) {
+                    currentPiece.shape = previousShape;
+                } else {
+                    playSound('rotate');
+                }
+            } catch(e) {
+                console.error('Rotation error:', e);
+            }
+        }
+        function clearLines() {
+            let linesCleared = 0;
+            let clearedRows = [];
+            // First, identify all rows to clear
+            for(let row = ROWS - 1; row >= 0; row--) {
+                if(board[row] && board[row].every(cell => cell !== 0)) {
+                    clearedRows.push(row);
+                }
+            }
+            // Create explosions before modifying the board
+            clearedRows.forEach((row, index) => {
+                setTimeout(() => {
+                    createPixelExplosion(row, clearedRows.length);
+                }, index * 50); // Stagger explosions for multiple lines
+            });
+            // Now remove the cleared rows
+            for(let i = clearedRows.length - 1; i >= 0; i--) {
+                board.splice(clearedRows[i], 1);
+                board.unshift(Array(COLS).fill(0));
+                linesCleared++;
+            }
+            if(linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * 100 * level;
+                if(linesCleared === 1) playSound('clear1');
+                else if(linesCleared === 2) playSound('clear2');
+                else if(linesCleared >= 3) playSound('clear3');
+                if(lines >= level * 10) {
+                    level++;
+                }
+                updateUI();
+            }
+        }
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lines').textContent = lines;
+        }
+        function gameOver() {
+            if (!gameRunning) return; // Prevent multiple game over calls
+            gameRunning = false;
+            gameOverDelay = true;
+            gamePaused = false;
+            document.getElementById('pauseOverlay').classList.remove('show');
+            stopMidi();
+            document.getElementById('finalScore').textContent = score;
+            // Check for high score
+            newHighScoreIndex = checkHighScore(score);
+            if (newHighScoreIndex !== -1) {
+                document.getElementById('nameEntry').classList.add('show');
+                // Focus first input
+                setTimeout(() => {
+                    const char1 = document.getElementById('char1');
+                    if (char1) {
+                        char1.value = '';
+                        char1.focus();
+                    }
+                }, 100);
+            }
+            setTimeout(() => {
+                document.getElementById('gameOverOverlay').classList.add('show');
+            }, 500);
+        }
+        function drop() {
+            if(!currentPiece) return;
+            if(!collision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+            } else {
+                playSound('drop');
+                merge();
+                clearLines();
+                // Check if the next piece can spawn BEFORE updating pieces
+                currentPiece = nextPiece;
+                if (!currentPiece) {
+                    currentPiece = createPiece();
+                }
+                if(checkGameOver(currentPiece)) {
+                    // Game over - don't create a new next piece
+                    draw();
+                    gameOver();
+                } else {
+                    // Only create new next piece if game continues
+                    nextPiece = createPiece();
+                    drawNextPiece();
+                }
+            }
+        }
+        function hardDrop() {
+            if(!currentPiece) return;
+            while(!collision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            playSound('drop');
+            merge();
+            clearLines();
+            // Check if the next piece can spawn BEFORE updating pieces
+            currentPiece = nextPiece;
+            if (!currentPiece) {
+                currentPiece = createPiece();
+            }
+            if(checkGameOver(currentPiece)) {
+                // Game over - don't create a new next piece
+                draw();
+                gameOver();
+            } else {
+                // Only create new next piece if game continues
+                nextPiece = createPiece();
+                drawNextPiece();
+            }
+            updateUI();
+        }
+        function move(dir) {
+            if(!currentPiece) return;
+            if(!collision(currentPiece, dir, 0)) {
+                currentPiece.x += dir;
+            }
+        }
+        function gameLoop(time = 0) {
+            if(!gameRunning || gameOverDelay) return;
+            if(!gamePaused && currentPiece) {
+                const deltaTime = time - lastTime;
+                lastTime = time;
+                dropTime += deltaTime;
+                // Ensure minimum drop time of 50ms even at high levels
+                const dropInterval = Math.max(50, 1000 / (level * 0.8 + 0.5));
+                if(dropTime > dropInterval) {
+                    drop();
+                    dropTime = 0;
+                }
+                draw();
+            } else if (!gamePaused) {
+                draw();
+            }
+            if(gameRunning && !gameOverDelay) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+        function startGame() {
+            try {
+                // Clean up any existing game state
+                if (midiTimer) clearTimeout(midiTimer);
+                const gameArea = document.querySelector('.game-area');
+                const particles = gameArea.querySelectorAll('.pixel-particle');
+                particles.forEach(p => p.remove());
+                initAudio();
+                initMidi();
+                initBoard();
+                score = 0;
+                lines = 0;
+                level = 1;
+                dropTime = 0;
+                lastTime = 0;
+                gameOverDelay = false;
+                newHighScoreIndex = -1;
+                updateUI();
+                // Create pieces - ensure both are created
+                currentPiece = createPiece();
+                // Check if the first piece can even fit
+                if(checkGameOver(currentPiece)) {
+                    gameRunning = false;
+                    draw();
+                    gameOver();
+                    return;
+                }
+                // Only create next piece if the game can start
+                nextPiece = createPiece();
+                drawNextPiece();
+                gameRunning = true;
+                gamePaused = false;
+                document.getElementById('gameOverOverlay').classList.remove('show');
+                document.getElementById('pauseOverlay').classList.remove('show');
+                document.getElementById('nameEntry').classList.remove('show');
+                document.getElementById('char1').value = '';
+                document.getElementById('char2').value = '';
+                document.getElementById('char3').value = '';
+                document.getElementById('startBtn').textContent = 'Restart Game';
+                displayHighScores();
+                draw();
+                startMidi();
+                gameLoop();
+            } catch(e) {
+                console.error('Error starting game:', e);
+                alert('Error starting game. Please refresh the page.');
+            }
+        }
+        // --- Updated name input handling ---
+        // Handle name input navigation (Updated parts)
+        document.getElementById('char1').addEventListener('input', function(e) {
+            // Only uppercase non-empty values, allow clearing
+            if (e.target.value !== '') {
+                 e.target.value = e.target.value.toUpperCase().replace(/[^A-Z ]/g, ''); // Allow space
+            }
+            if (e.target.value.length >= 1) { // Allow 0 length
+                document.getElementById('char2').focus();
+            }
+        });
+        document.getElementById('char2').addEventListener('input', function(e) {
+            if (e.target.value !== '') {
+                 e.target.value = e.target.value.toUpperCase().replace(/[^A-Z ]/g, '');
+            }
+            if (e.target.value.length >= 1) {
+                document.getElementById('char3').focus();
+            }
+        });
+        document.getElementById('char3').addEventListener('input', function(e) {
+             if (e.target.value !== '') {
+                 e.target.value = e.target.value.toUpperCase().replace(/[^A-Z ]/g, '');
+            }
+            if (e.target.value.length >= 1) {
+                e.target.blur();
+            }
+        });
+        // Backspace handling remains mostly the same, but ensure it works with empty fields
+        document.getElementById('char1').addEventListener('keydown', function(e) {
+            // Standard backspace behavior is fine
+        });
+        document.getElementById('char2').addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && e.target.value === '') {
+                e.preventDefault();
+                const char1 = document.getElementById('char1');
+                char1.focus();
+                // Optionally, move cursor to end or select content if needed
+                char1.value = char1.value; // Keeps cursor at the end
+            }
+        });
+        document.getElementById('char3').addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && e.target.value === '') {
+                e.preventDefault();
+                const char2 = document.getElementById('char2');
+                char2.focus();
+                char2.value = char2.value;
+            } else if (e.key === 'Enter') {
+                submitHighScore();
+            }
+        });
+        // --- End of updated name input handling ---
+        document.addEventListener('keydown', (e) => {
+            // Allow typing in name entry
+            if (document.getElementById('nameEntry').classList.contains('show')) {
+                if (e.key === 'Enter') {
+                    submitHighScore();
+                }
+                return;
+            }
+            // Block input if game over overlay is showing (except for starting new game)
+            if (document.getElementById('gameOverOverlay').classList.contains('show')) {
+                return;
+            }
+            if(!gameRunning) return;
+            if(gamePaused && e.key !== 'p' && e.key !== 'P' && e.key !== 'Escape') return;
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if(currentPiece && !gamePaused) move(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if(currentPiece && !gamePaused) move(1);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if(currentPiece && !gamePaused) rotate();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if(currentPiece && !gamePaused) {
+                        drop();
+                        score += 1;
+                        updateUI();
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    if(currentPiece && !gamePaused) hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    if(gameRunning && !gameOverDelay) {
+                        gamePaused = !gamePaused;
+                        document.getElementById('pauseOverlay').classList.toggle('show', gamePaused);
+                        if(!gamePaused) gameLoop();
+                    }
+                    break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    cycleVolume();
+                    break;
+                case 'Escape':
+                    e.preventDefault();
+                    if(gameRunning && !gameOverDelay) {
+                        gamePaused = false;
+                        document.getElementById('pauseOverlay').classList.remove('show');
+                        gameOver();
+                    }
+                    break;
+            }
+        });
+        // Initialize on load
+        loadHighScores();
+        draw();
+        drawNextPiece();
+    </script>
+</body>
+</html>
